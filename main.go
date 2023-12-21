@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	"sync"
 
 	"github.com/kaniusii/guessinggame/keeper"
 	"github.com/kaniusii/guessinggame/seeker"
 )
 
 func main() {
+
 	var min, max, n int
 	var err error
 
@@ -34,7 +36,8 @@ func main() {
 		return
 	}
 
-	var totalBob, totalRobert, totalSam, totalEmily int
+	totalBob, totalRobert, totalSam, totalEmily := 0, 0, 0, 0
+	var wg sync.WaitGroup
 
 	for i := 0; i < n; i++ {
 		k := keeper.Keeper{
@@ -42,27 +45,43 @@ func main() {
 			Max: max,
 			Num: min + rand.Intn(max-min+1),
 		}
-
+		fmt.Println(k.Num)
 		s := seeker.Seeker{
 			Keeper: &k,
 		}
 
-		s.Turns = 0
-		s.BisectionBob()
-		totalBob += s.Turns
+		wg.Add(4)
 
-		s.Turns = 0
-		s.RandomRobert()
-		totalRobert += s.Turns
+		go func() {
+			s.Turns = 0
+			s.BisectionBob()
+			totalBob += s.Turns
+			wg.Done()
+		}()
 
-		s.Turns = 0
-		s.StartSam()
-		totalSam += s.Turns
+		go func() {
+			s.Turns = 0
+			s.RandomRobert()
+			totalRobert += s.Turns
+			wg.Done()
+		}()
 
-		s.Turns = 0
-		s.EndEmily()
-		totalEmily += s.Turns
+		go func() {
+			s.Turns = 0
+			s.StartSam()
+			totalSam += s.Turns
+			wg.Done()
+		}()
+
+		go func() {
+			s.Turns = 0
+			s.EndEmily()
+			totalEmily += s.Turns
+			wg.Done()
+		}()
 	}
+
+	wg.Wait()
 
 	fmt.Println("Total turns for Bob:", totalBob)
 	fmt.Println("Total turns for Robert:", totalRobert)
@@ -70,7 +89,6 @@ func main() {
 	fmt.Println("Total turns for Emily:", totalEmily)
 	fmt.Println()
 
-	// Calculating average as float and formatting as string with 2 decimal places
 	fmt.Println("Average turns for Bob:", strconv.FormatFloat(float64(totalBob)/float64(n), 'f', 2, 64))
 	fmt.Println("Average turns for Robert:", strconv.FormatFloat(float64(totalRobert)/float64(n), 'f', 2, 64))
 	fmt.Println("Average turns for Sam:", strconv.FormatFloat(float64(totalSam)/float64(n), 'f', 2, 64))
